@@ -1,10 +1,10 @@
-all: suffix-array
+all: test-suffix-array
 
-suffix-array: suffix-array.o
+test-suffix-array: suffix-array.o test-suffix-array.o
 	gcc -o $@ $^
 
 %.o: %.c
 	gcc -c $^
 
 clean:
-	rm -rf *.o suffix-array
+	rm -rf *.o test-suffix-array
