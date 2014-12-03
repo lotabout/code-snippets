@@ -47,6 +47,12 @@ int *build_suffix_array(char *text)
 
     int count = 1; /* number of iteration */
     for (count = 1; count < length; count*=2) {
+        /* Before iteration, the suffix array is sorted according to the first
+         * *count* chracters.
+         * After iteration, the suffix array is sorted according to the first
+         * *count* x 2 characters.
+         * The suffix array is stored in *ranks* array and is relative ranks */
+
         /* update ranks */
         for (i = 0; i < length; ++i) {
             int index = suffixes[i].index;
