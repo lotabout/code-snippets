@@ -34,30 +34,45 @@ int suffix_cmp(const void *va, const void *vb)
         (a->rank[1] - b->rank[1]) : (a->rank[0] - b->rank[0]);
 }
 
-/* Build suffix array for a gvien string */
+/* buid suffix array for a given string 
+ * A suffix array is an array of index in the original string so that
+ * text[sa[i]] < text[sa[i+1]]
+ * i.e. suffix is an ordered array, each item represents a substring of the
+ * text.
+ * */
 int *build_suffix_array(char *text)
 {
     int length = strlen(text);
+    int i;
 
     /* An array to store suffixes and their indexes */
     struct suffix *suffixes = (struct suffix *)malloc(length * sizeof(*suffixes));
-
-    int logn = 1;
-    int tmp = length;
-    while(tmp >>= 1) logn++;
+    if (suffixes == NULL) {
+        fprintf(stderr, "build_suffix_array: not enough memory allocating suffixes\n");
+        exit(1);
+    }
 
     /* a map: original index -> rank */
     int *ranks = (int *)malloc(length * sizeof(*ranks));
-    int i;
+    if (suffixes == NULL) {
+        fprintf(stderr, "build_suffix_array: not enough memory allocating ranks.\n");
+    }
 
     /* formulate initial ranks according to alphebet order */
     for (i = 0; i < length; ++i) {
-        ranks[i] = text[i] - 'A'; /* note that 'A' < 'a' */
+        ranks[i] = text[i];
         suffixes[i].index = i;
     }
 
     int count = 1; /* number of iteration */
     for (count = 1; count < length; count*=2) {
+        /* Before iteration:
+         * the suffixes is sorted according to the first _count_ chracters,
+         * and their relative order is stored in _ranks_.
+         * After iteration:
+         * The suffixes is sorted according to the first _count_ * 2
+         * characters, and the relative order is sotred in _ranks_ */
+
         /* update ranks */
         for (i = 0; i < length; ++i) {
             int index = suffixes[i].index;
@@ -86,13 +101,23 @@ int *build_suffix_array(char *text)
     return ranks;
 }
 
-int *buildLCP(char *text, int *sa)
+/* build LCP array given a string and its suffix array 
+ * LCP[i] is the longest common prefix of text[sa[i]] and text[sa[i-1]]
+ * */
+int *build_lcp(char *text, int *sa)
 {
     int length = strlen(text);
     int i;
 
-    /* calculate rank array from sa */
+    /* ranks[i]: the rank in suffix array of text[i] 
+     * i.e. sa[ranks[i]] = i */
     int *ranks = (int *)malloc(length * sizeof(*ranks));
+    if (ranks == NULL) {
+        fprintf(stderr, "build_lcp: not enough memory allocating ranks.\n");
+        exit(1);
+    }
+
+    /* calculate rank array from sa */
     for (i = 0; i < length; ++i) {
         ranks[sa[i]] = i;
     }
@@ -100,13 +125,20 @@ int *buildLCP(char *text, int *sa)
     /* lcp[i] stores the longest common prefix of sa[ranks[i]] and
      * sa[ranks[i]-1] */
     int *lcp = (int *)malloc(length * sizeof(*lcp));
+    if (lcp == NULL) {
+        fprintf(stderr, "build_lcp: not enough memory allocating lcp\n");
+    }
     int last_lcp = 0;
-    lcp[0] = 0;    /* sa[-1] do not exist */
 
     /* if h[i] = lcp[ranks[i]], we have h[i+1] >= h[i] - 1
-     * so we calculate lcp according to ranks[1], ranks[2], ... ranks[n]
+     * so we calculate lcp according to ranks[0], ranks[1], ... ranks[n]
      * thus we can make use of h[i-1] to reduce calculation*/
-    for (i = 1; i < length; ++i) {
+    for (i = 0; i < length; ++i) {
+        if (ranks[i] == 0) {
+            lcp[0] = 0;    /* sa[-1] do not exist */
+            continue;
+        }
+
         if (last_lcp > 0)
             last_lcp--;
 
@@ -167,7 +199,7 @@ int main(int argc, char *argv[])
     for (i = 0; test[i].string; ++i) {
         int length = strlen(test[i].string);
         int *sa = build_suffix_array(test[i].string);
-        int *lcp = buildLCP(test[i].string, sa);
+        int *lcp = build_lcp(test[i].string, sa);
 
         bool passed = true;
         if (! array_equal(sa, test[i].sa, length))
